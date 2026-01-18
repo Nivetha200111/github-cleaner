@@ -1,6 +1,7 @@
 import os
 import base64
 from github import Github, GithubException
+from .cache import cache
 
 
 class GitHubService:
@@ -10,9 +11,15 @@ class GitHubService:
             raise ValueError("GitHub token is required")
         self.github = Github(self.token)
         self.user = self.github.get_user()
+        self._user_login = self.user.login
 
     def list_repos(self, include_forks: bool = False):
         """List all repositories for the authenticated user."""
+        cache_key = f"repos:{self._user_login}:{include_forks}"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
         repos = []
         for repo in self.user.get_repos():
             if not include_forks and repo.fork:
@@ -28,7 +35,9 @@ class GitHubService:
                 'updated_at': repo.updated_at.isoformat() if repo.updated_at else None,
                 'private': repo.private
             })
-        return sorted(repos, key=lambda x: x['updated_at'] or '', reverse=True)
+        result = sorted(repos, key=lambda x: x['updated_at'] or '', reverse=True)
+        cache.set(cache_key, result, ttl=120)  # Cache for 2 minutes
+        return result
 
     def _has_readme(self, repo) -> bool:
         """Check if repository has a README file."""
@@ -40,7 +49,12 @@ class GitHubService:
 
     def analyze_repo(self, repo_name: str) -> dict:
         """Analyze a repository's structure and content."""
-        repo = self.github.get_repo(f"{self.user.login}/{repo_name}")
+        cache_key = f"analysis:{self._user_login}:{repo_name}"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+        repo = self.github.get_repo(f"{self._user_login}/{repo_name}")
 
         analysis = {
             'name': repo.name,
@@ -55,6 +69,7 @@ class GitHubService:
             'existing_readme': self._get_readme_content(repo),
             'key_files': self._identify_key_files(repo)
         }
+        cache.set(cache_key, analysis, ttl=180)  # Cache for 3 minutes
         return analysis
 
     def _get_languages(self, repo) -> dict:
@@ -269,7 +284,7 @@ class GitHubService:
 
     def commit_readme(self, repo_name: str, content: str, message: str = "Update README.md") -> bool:
         """Commit a new README to the repository."""
-        repo = self.github.get_repo(f"{self.user.login}/{repo_name}")
+        repo = self.github.get_repo(f"{self._user_login}/{repo_name}")
 
         try:
             # Try to update existing README
@@ -288,6 +303,7 @@ class GitHubService:
                 content=content
             )
 
+        self.invalidate_cache(repo_name)
         return True
 
     def get_file_content(self, repo_name: str, file_path: str) -> str:
@@ -301,7 +317,12 @@ class GitHubService:
 
     def scan_security(self, repo_name: str) -> dict:
         """Scan repository for security issues like exposed secrets."""
-        repo = self.github.get_repo(f"{self.user.login}/{repo_name}")
+        cache_key = f"security:{self._user_login}:{repo_name}"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+        repo = self.github.get_repo(f"{self._user_login}/{repo_name}")
 
         issues = []
         warnings = []
@@ -395,12 +416,14 @@ class GitHubService:
         except GithubException as e:
             pass
 
-        return {
+        result = {
             'issues': issues,
             'warnings': warnings,
             'score': max(0, 100 - (len(issues) * 25) - (len(warnings) * 10)),
             'has_critical': len(issues) > 0
         }
+        cache.set(cache_key, result, ttl=300)  # Cache for 5 minutes
+        return result
 
     def _get_all_files(self, repo, contents, path="") -> list:
         """Recursively get all files in repo."""
@@ -548,7 +571,7 @@ Cargo.lock
 
     def commit_gitignore(self, repo_name: str, content: str) -> bool:
         """Commit .gitignore to repository."""
-        repo = self.github.get_repo(f"{self.user.login}/{repo_name}")
+        repo = self.github.get_repo(f"{self._user_login}/{repo_name}")
 
         try:
             existing = repo.get_contents('.gitignore')
@@ -564,6 +587,7 @@ Cargo.lock
                 message='Add .gitignore via GitHub Cleaner',
                 content=content
             )
+        self.invalidate_cache(repo_name)
         return True
 
     def generate_license(self, license_type: str = 'MIT') -> str:
@@ -617,7 +641,7 @@ limitations under the License.
 
     def commit_license(self, repo_name: str, content: str) -> bool:
         """Commit LICENSE to repository."""
-        repo = self.github.get_repo(f"{self.user.login}/{repo_name}")
+        repo = self.github.get_repo(f"{self._user_login}/{repo_name}")
 
         try:
             existing = repo.get_contents('LICENSE')
@@ -633,11 +657,17 @@ limitations under the License.
                 message='Add LICENSE via GitHub Cleaner',
                 content=content
             )
+        self.invalidate_cache(repo_name)
         return True
 
     def get_repo_health(self, repo_name: str) -> dict:
         """Calculate overall repository health score."""
-        repo = self.github.get_repo(f"{self.user.login}/{repo_name}")
+        cache_key = f"health:{self._user_login}:{repo_name}"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+        repo = self.github.get_repo(f"{self._user_login}/{repo_name}")
 
         score = 0
         checks = []
@@ -693,9 +723,18 @@ limitations under the License.
         if is_secure:
             score += 15
 
-        return {
+        result = {
             'score': score,
             'grade': 'A' if score >= 90 else 'B' if score >= 75 else 'C' if score >= 60 else 'D' if score >= 40 else 'F',
             'checks': checks,
             'security': security
         }
+        cache.set(cache_key, result, ttl=180)  # Cache for 3 minutes
+        return result
+
+    def invalidate_cache(self, repo_name: str = None):
+        """Invalidate cache for a repo or all repos."""
+        if repo_name:
+            cache.clear_pattern(f":{repo_name}")
+        else:
+            cache.clear_pattern(self._user_login)
