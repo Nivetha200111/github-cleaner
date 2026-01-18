@@ -8,7 +8,7 @@ class AIService:
         if not self.api_key:
             raise ValueError("Google AI API key is required")
         genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel('gemini-2.0-flash')
 
     def generate_readme(self, analysis: dict, vercel_url: str = None) -> str:
         """Generate a README based on repository analysis."""

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Cleaner - README Generator</title>
+    <title>GITHUB CLEANER // SYSTEM ONLINE</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 </head>
@@ -11,35 +11,80 @@
     <!-- Matrix Rain Canvas -->
     <canvas id="matrix-canvas"></canvas>
 
+    <!-- Glitch Overlay -->
+    <div class="glitch-overlay"></div>
+
     <div class="container">
         <header>
-            <h1>GITHUB CLEANER</h1>
-            <p class="tagline">[ Analyze repositories & generate READMEs with AI ]</p>
+            <div class="logo-glitch" data-text="GITHUB CLEANER">GITHUB CLEANER</div>
+            <p class="tagline typing-effect">[ SYSTEM INITIALIZED // READY FOR INPUT ]</p>
+            <div class="system-stats">
+                <span class="stat"><span class="label">STATUS:</span> <span class="value online">ONLINE</span></span>
+                <span class="stat"><span class="label">AI:</span> <span class="value">GEMINI-2.0</span></span>
+                <span class="stat"><span class="label">MODE:</span> <span class="value">ANALYSIS</span></span>
+            </div>
         </header>
 
         <!-- Main Content -->
         <div class="main-content">
             <!-- Repository List -->
-            <div class="repos-section">
+            <div class="repos-section terminal-window">
+                <div class="terminal-header">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                    <span class="terminal-title">REPOSITORIES</span>
+                </div>
                 <div class="section-header">
-                    <h2>> REPOSITORIES</h2>
-                    <button class="btn btn-secondary" onclick="loadRepos()">REFRESH</button>
+                    <h2>> ls -la repos/</h2>
+                    <button class="btn btn-secondary btn-glitch" onclick="loadRepos()">
+                        <span class="btn-text">REFRESH</span>
+                    </button>
                 </div>
                 <div class="repos-list" id="repos-list">
-                    <p class="loading">Initializing connection...</p>
+                    <p class="loading">
+                        <span class="cursor-blink">_</span> Establishing connection...
+                    </p>
                 </div>
             </div>
 
             <!-- Analysis Panel -->
-            <div class="analysis-section" id="analysis-section" style="display: none;">
+            <div class="analysis-section terminal-window" id="analysis-section" style="display: none;">
+                <div class="terminal-header">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                    <span class="terminal-title">ANALYSIS TERMINAL</span>
+                </div>
+
                 <div class="section-header">
-                    <h2>> ANALYSIS</h2>
-                    <span id="selected-repo" class="repo-badge"></span>
+                    <h2>> analyze <span id="selected-repo" class="highlight"></span></h2>
+                </div>
+
+                <!-- Health Score Banner -->
+                <div class="health-banner" id="health-banner" style="display: none;">
+                    <div class="health-score">
+                        <div class="score-circle" id="score-circle">
+                            <span class="score-value" id="score-value">--</span>
+                            <span class="score-grade" id="score-grade">?</span>
+                        </div>
+                    </div>
+                    <div class="health-checks" id="health-checks"></div>
+                </div>
+
+                <!-- Security Alert -->
+                <div class="security-alert" id="security-alert" style="display: none;">
+                    <div class="alert-header">
+                        <span class="alert-icon">⚠</span>
+                        <span class="alert-title">SECURITY SCAN RESULTS</span>
+                    </div>
+                    <div class="alert-content" id="security-content"></div>
                 </div>
 
                 <div class="analysis-tabs">
                     <button class="tab active" data-tab="overview">OVERVIEW</button>
                     <button class="tab" data-tab="readme">README</button>
+                    <button class="tab" data-tab="tools">TOOLS</button>
                 </div>
 
                 <div class="tab-content" id="overview-tab">
@@ -61,8 +106,8 @@
                             <div id="vercel-info"></div>
                         </div>
                     </div>
-                    <button class="btn btn-primary btn-large" onclick="generateReadme()">
-                        [ GENERATE README ]
+                    <button class="btn btn-primary btn-large btn-glow" onclick="generateReadme()">
+                        [ GENERATE README WITH AI ]
                     </button>
                 </div>
 
@@ -70,9 +115,34 @@
                     <div class="readme-preview">
                         <div class="readme-actions">
                             <button class="btn btn-secondary" onclick="copyReadme()">COPY</button>
-                            <button class="btn btn-primary" onclick="commitReadme()">COMMIT TO REPO</button>
+                            <button class="btn btn-primary btn-glow" onclick="commitReadme()">COMMIT TO REPO</button>
                         </div>
                         <div id="readme-content" class="markdown-body"></div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tools-tab" style="display: none;">
+                    <div class="tools-grid">
+                        <div class="tool-card" onclick="addGitignore()">
+                            <div class="tool-icon">📄</div>
+                            <h4>ADD .GITIGNORE</h4>
+                            <p>Generate and commit proper .gitignore</p>
+                        </div>
+                        <div class="tool-card" onclick="addLicense('MIT')">
+                            <div class="tool-icon">📜</div>
+                            <h4>ADD MIT LICENSE</h4>
+                            <p>Add MIT license to repository</p>
+                        </div>
+                        <div class="tool-card" onclick="addLicense('Apache-2.0')">
+                            <div class="tool-icon">📋</div>
+                            <h4>ADD APACHE LICENSE</h4>
+                            <p>Add Apache 2.0 license</p>
+                        </div>
+                        <div class="tool-card danger" onclick="runSecurityScan()">
+                            <div class="tool-icon">🔒</div>
+                            <h4>SECURITY SCAN</h4>
+                            <p>Scan for exposed secrets & vulnerabilities</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -80,9 +150,17 @@
 
         <!-- Loading Overlay -->
         <div class="loading-overlay" id="loading-overlay" style="display: none;">
-            <div class="spinner"></div>
-            <p id="loading-text">PROCESSING...</p>
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p id="loading-text" class="glitch-text">PROCESSING...</p>
+                <div class="loading-bar">
+                    <div class="loading-progress"></div>
+                </div>
+            </div>
         </div>
+
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toast-container"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>

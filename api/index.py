@@ -200,6 +200,91 @@ def health_check():
     return jsonify({'status': 'ok', 'service': 'github-cleaner'})
 
 
+@app.route('/api/security/<repo_name>', methods=['GET'])
+def scan_security(repo_name):
+    """Scan repository for security issues."""
+    try:
+        github_token = request.headers.get('X-GitHub-Token') or os.getenv('GITHUB_TOKEN')
+        if not github_token:
+            return jsonify({'error': 'GitHub token required'}), 401
+
+        github = get_github_service(github_token)
+        result = github.scan_security(repo_name)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/health-score/<repo_name>', methods=['GET'])
+def get_health_score(repo_name):
+    """Get repository health score."""
+    try:
+        github_token = request.headers.get('X-GitHub-Token') or os.getenv('GITHUB_TOKEN')
+        if not github_token:
+            return jsonify({'error': 'GitHub token required'}), 401
+
+        github = get_github_service(github_token)
+        result = github.get_repo_health(repo_name)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/gitignore/<repo_name>', methods=['GET'])
+def get_gitignore(repo_name):
+    """Generate .gitignore for repository."""
+    try:
+        github_token = request.headers.get('X-GitHub-Token') or os.getenv('GITHUB_TOKEN')
+        if not github_token:
+            return jsonify({'error': 'GitHub token required'}), 401
+
+        github = get_github_service(github_token)
+        content = github.generate_gitignore(repo_name)
+        return jsonify({'content': content})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/gitignore/<repo_name>', methods=['POST'])
+def commit_gitignore(repo_name):
+    """Commit .gitignore to repository."""
+    try:
+        github_token = request.headers.get('X-GitHub-Token') or os.getenv('GITHUB_TOKEN')
+        if not github_token:
+            return jsonify({'error': 'GitHub token required'}), 401
+
+        data = request.get_json() or {}
+        content = data.get('content')
+
+        github = get_github_service(github_token)
+        if not content:
+            content = github.generate_gitignore(repo_name)
+
+        github.commit_gitignore(repo_name, content)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/license/<repo_name>', methods=['POST'])
+def commit_license(repo_name):
+    """Generate and commit LICENSE to repository."""
+    try:
+        github_token = request.headers.get('X-GitHub-Token') or os.getenv('GITHUB_TOKEN')
+        if not github_token:
+            return jsonify({'error': 'GitHub token required'}), 401
+
+        data = request.get_json() or {}
+        license_type = data.get('type', 'MIT')
+
+        github = get_github_service(github_token)
+        content = github.generate_license(license_type)
+        github.commit_license(repo_name, content)
+        return jsonify({'success': True, 'type': license_type})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # Run locally
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
