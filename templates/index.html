@@ -8,89 +8,69 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 </head>
 <body>
+    <!-- Matrix Rain Canvas -->
+    <canvas id="matrix-canvas"></canvas>
+
     <div class="container">
         <header>
-            <h1>GitHub Cleaner</h1>
-            <p>Analyze repositories & generate professional READMEs with AI</p>
+            <h1>GITHUB CLEANER</h1>
+            <p class="tagline">[ Analyze repositories & generate READMEs with AI ]</p>
         </header>
 
-        <!-- Settings Panel -->
-        <div class="settings-panel" id="settings-panel">
-            <h3>API Configuration</h3>
-            <div class="settings-grid">
-                <div class="setting-item">
-                    <label for="github-token">GitHub Token</label>
-                    <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx">
-                    <small><a href="https://github.com/settings/tokens" target="_blank">Create token</a> (repo scope)</small>
-                </div>
-                <div class="setting-item">
-                    <label for="ai-key">Google AI API Key</label>
-                    <input type="password" id="ai-key" placeholder="AIzaSy...">
-                    <small><a href="https://makersuite.google.com/app/apikey" target="_blank">Get API key</a></small>
-                </div>
-                <div class="setting-item">
-                    <label for="vercel-token">Vercel Token (optional)</label>
-                    <input type="password" id="vercel-token" placeholder="xxxxxxxxxxxx">
-                    <small><a href="https://vercel.com/account/tokens" target="_blank">Create token</a></small>
-                </div>
-            </div>
-            <button class="btn btn-primary" onclick="saveSettings()">Save & Load Repos</button>
-        </div>
-
         <!-- Main Content -->
-        <div class="main-content" id="main-content" style="display: none;">
+        <div class="main-content">
             <!-- Repository List -->
             <div class="repos-section">
                 <div class="section-header">
-                    <h2>Your Repositories</h2>
-                    <button class="btn btn-secondary" onclick="loadRepos()">Refresh</button>
+                    <h2>> REPOSITORIES</h2>
+                    <button class="btn btn-secondary" onclick="loadRepos()">REFRESH</button>
                 </div>
                 <div class="repos-list" id="repos-list">
-                    <p class="loading">Loading repositories...</p>
+                    <p class="loading">Initializing connection...</p>
                 </div>
             </div>
 
             <!-- Analysis Panel -->
             <div class="analysis-section" id="analysis-section" style="display: none;">
                 <div class="section-header">
-                    <h2>Repository Analysis</h2>
+                    <h2>> ANALYSIS</h2>
                     <span id="selected-repo" class="repo-badge"></span>
                 </div>
 
                 <div class="analysis-tabs">
-                    <button class="tab active" data-tab="overview">Overview</button>
-                    <button class="tab" data-tab="readme">README Preview</button>
+                    <button class="tab active" data-tab="overview">OVERVIEW</button>
+                    <button class="tab" data-tab="readme">README</button>
                 </div>
 
                 <div class="tab-content" id="overview-tab">
                     <div class="analysis-grid">
                         <div class="analysis-card">
-                            <h4>Languages</h4>
+                            <h4>// LANGUAGES</h4>
                             <div id="languages-list"></div>
                         </div>
                         <div class="analysis-card">
-                            <h4>Dependencies</h4>
+                            <h4>// DEPENDENCIES</h4>
                             <div id="deps-list"></div>
                         </div>
                         <div class="analysis-card">
-                            <h4>Structure</h4>
+                            <h4>// STRUCTURE</h4>
                             <div id="structure-list"></div>
                         </div>
                         <div class="analysis-card">
-                            <h4>Vercel Deployment</h4>
+                            <h4>// DEPLOYMENT</h4>
                             <div id="vercel-info"></div>
                         </div>
                     </div>
                     <button class="btn btn-primary btn-large" onclick="generateReadme()">
-                        Generate README with AI
+                        [ GENERATE README ]
                     </button>
                 </div>
 
                 <div class="tab-content" id="readme-tab" style="display: none;">
                     <div class="readme-preview">
                         <div class="readme-actions">
-                            <button class="btn btn-secondary" onclick="copyReadme()">Copy</button>
-                            <button class="btn btn-primary" onclick="commitReadme()">Commit to Repo</button>
+                            <button class="btn btn-secondary" onclick="copyReadme()">COPY</button>
+                            <button class="btn btn-primary" onclick="commitReadme()">COMMIT TO REPO</button>
                         </div>
                         <div id="readme-content" class="markdown-body"></div>
                     </div>
@@ -101,7 +81,7 @@
         <!-- Loading Overlay -->
         <div class="loading-overlay" id="loading-overlay" style="display: none;">
             <div class="spinner"></div>
-            <p id="loading-text">Processing...</p>
+            <p id="loading-text">PROCESSING...</p>
         </div>
     </div>
 

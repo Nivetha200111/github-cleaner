@@ -5,49 +5,55 @@ let generatedReadme = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    loadStoredSettings();
+    initMatrix();
     setupTabs();
+    loadRepos();
 });
 
-// Settings Management
-function loadStoredSettings() {
-    const githubToken = localStorage.getItem('github_token');
-    const aiKey = localStorage.getItem('ai_key');
-    const vercelToken = localStorage.getItem('vercel_token');
+// Matrix Rain Effect
+function initMatrix() {
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
 
-    if (githubToken) document.getElementById('github-token').value = githubToken;
-    if (aiKey) document.getElementById('ai-key').value = aiKey;
-    if (vercelToken) document.getElementById('vercel-token').value = vercelToken;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    if (githubToken && aiKey) {
-        loadRepos();
-    }
-}
+    const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const charArray = chars.split('');
 
-function saveSettings() {
-    const githubToken = document.getElementById('github-token').value.trim();
-    const aiKey = document.getElementById('ai-key').value.trim();
-    const vercelToken = document.getElementById('vercel-token').value.trim();
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
 
-    if (!githubToken || !aiKey) {
-        alert('GitHub Token and AI API Key are required');
-        return;
+    const drops = [];
+    for (let i = 0; i < columns; i++) {
+        drops[i] = Math.random() * -100;
     }
 
-    localStorage.setItem('github_token', githubToken);
-    localStorage.setItem('ai_key', aiKey);
-    if (vercelToken) localStorage.setItem('vercel_token', vercelToken);
+    function draw() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    loadRepos();
-}
+        ctx.fillStyle = '#0f0';
+        ctx.font = fontSize + 'px monospace';
 
-function getHeaders() {
-    return {
-        'Content-Type': 'application/json',
-        'X-GitHub-Token': localStorage.getItem('github_token') || '',
-        'X-AI-Key': localStorage.getItem('ai_key') || '',
-        'X-Vercel-Token': localStorage.getItem('vercel_token') || ''
-    };
+        for (let i = 0; i < drops.length; i++) {
+            const text = charArray[Math.floor(Math.random() * charArray.length)];
+            ctx.fillStyle = `rgba(0, ${150 + Math.random() * 105}, 0, ${0.5 + Math.random() * 0.5})`;
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+    }
+
+    setInterval(draw, 50);
+
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
 }
 
 // Tabs
@@ -68,12 +74,10 @@ function setupTabs() {
 
 // Load Repositories
 async function loadRepos() {
-    showLoading('Loading repositories...');
+    showLoading('ACCESSING GITHUB...');
 
     try {
-        const response = await fetch('/api/repos', {
-            headers: getHeaders()
-        });
+        const response = await fetch('/api/repos');
         const data = await response.json();
 
         if (data.error) {
@@ -81,9 +85,9 @@ async function loadRepos() {
         }
 
         renderRepos(data.repos);
-        document.getElementById('main-content').style.display = 'grid';
     } catch (error) {
-        alert('Error loading repos: ' + error.message);
+        document.getElementById('repos-list').innerHTML =
+            `<p class="loading" style="color: #ff0000;">ERROR: ${error.message}</p>`;
     } finally {
         hideLoading();
     }
@@ -93,7 +97,7 @@ function renderRepos(repos) {
     const container = document.getElementById('repos-list');
 
     if (!repos.length) {
-        container.innerHTML = '<p class="loading">No repositories found</p>';
+        container.innerHTML = '<p class="loading">NO REPOSITORIES FOUND</p>';
         return;
     }
 
@@ -102,14 +106,14 @@ function renderRepos(repos) {
             <h4>
                 <span class="language-dot lang-${(repo.language || 'default').toLowerCase()}"></span>
                 ${repo.name}
-                ${repo.private ? '🔒' : ''}
+                ${repo.private ? '[PRIVATE]' : ''}
             </h4>
-            <p>${repo.description || 'No description'}</p>
+            <p>${repo.description || 'No description available'}</p>
             <div class="repo-meta">
                 <span>${repo.language || 'Unknown'}</span>
-                <span>⭐ ${repo.stars}</span>
+                <span>* ${repo.stars}</span>
                 <span class="readme-status ${repo.has_readme ? 'has-readme' : 'no-readme'}">
-                    ${repo.has_readme ? 'Has README' : 'No README'}
+                    ${repo.has_readme ? 'README' : 'NO README'}
                 </span>
             </div>
         </div>
@@ -118,7 +122,6 @@ function renderRepos(repos) {
 
 // Select Repository
 async function selectRepo(repoName) {
-    // Update UI
     document.querySelectorAll('.repo-card').forEach(card => {
         card.classList.toggle('selected', card.dataset.repo === repoName);
     });
@@ -127,19 +130,17 @@ async function selectRepo(repoName) {
     document.getElementById('selected-repo').textContent = repoName;
     document.getElementById('analysis-section').style.display = 'block';
 
-    // Switch to overview tab
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelector('[data-tab="overview"]').classList.add('active');
     document.getElementById('overview-tab').style.display = 'block';
     document.getElementById('readme-tab').style.display = 'none';
 
-    showLoading('Analyzing repository...');
+    showLoading('SCANNING REPOSITORY...');
 
     try {
-        // Fetch analysis and Vercel URL in parallel
         const [analysisRes, vercelRes] = await Promise.all([
-            fetch(`/api/analyze/${repoName}`, { headers: getHeaders() }),
-            fetch(`/api/vercel/${repoName}`, { headers: getHeaders() })
+            fetch(`/api/analyze/${repoName}`),
+            fetch(`/api/vercel/${repoName}`)
         ]);
 
         const analysisData = await analysisRes.json();
@@ -150,7 +151,7 @@ async function selectRepo(repoName) {
         currentAnalysis = analysisData.analysis;
         renderAnalysis(currentAnalysis, vercelData.url);
     } catch (error) {
-        alert('Error analyzing repo: ' + error.message);
+        alert('ERROR: ' + error.message);
     } finally {
         hideLoading();
     }
@@ -170,7 +171,7 @@ function renderAnalysis(analysis, vercelUrl) {
 
         languagesEl.innerHTML = `<div class="language-bar">${langBar}</div>${langList}`;
     } else {
-        languagesEl.innerHTML = '<span class="dep-tag">Unknown</span>';
+        languagesEl.innerHTML = '<span class="dep-tag">UNKNOWN</span>';
     }
 
     // Dependencies
@@ -189,7 +190,7 @@ function renderAnalysis(analysis, vercelUrl) {
     if (deps.length) {
         depsEl.innerHTML = deps.slice(0, 15).map(d => `<span class="dep-tag">${d}</span>`).join('');
     } else {
-        depsEl.innerHTML = '<span class="dep-tag">No dependencies found</span>';
+        depsEl.innerHTML = '<span class="dep-tag">NO DEPS FOUND</span>';
     }
 
     // Structure
@@ -201,14 +202,14 @@ function renderAnalysis(analysis, vercelUrl) {
     if (vercelUrl) {
         vercelEl.innerHTML = `<a href="${vercelUrl}" target="_blank" style="color: var(--accent);">${vercelUrl}</a>`;
     } else {
-        vercelEl.innerHTML = '<span style="color: var(--text-secondary);">Not deployed on Vercel</span>';
+        vercelEl.innerHTML = '<span style="color: var(--text-dim);">NOT DEPLOYED</span>';
     }
 }
 
 function renderStructure(items, indent = 0) {
     return items.map(item => {
         const prefix = '  '.repeat(indent);
-        const icon = item.type === 'dir' ? '📁' : '📄';
+        const icon = item.type === 'dir' ? '[D]' : '[F]';
         let html = `<div>${prefix}${icon} <span class="${item.type === 'dir' ? 'dir' : ''}">${item.name}</span></div>`;
         if (item.children) {
             html += renderStructure(item.children, indent + 1);
@@ -220,16 +221,16 @@ function renderStructure(items, indent = 0) {
 // Generate README
 async function generateReadme() {
     if (!currentRepo) {
-        alert('Please select a repository first');
+        alert('SELECT A REPOSITORY FIRST');
         return;
     }
 
-    showLoading('Generating README with AI...');
+    showLoading('GENERATING README...');
 
     try {
         const response = await fetch('/api/generate', {
             method: 'POST',
-            headers: getHeaders(),
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ repo_name: currentRepo })
         });
 
@@ -239,19 +240,17 @@ async function generateReadme() {
 
         generatedReadme = data.readme;
 
-        // Switch to README tab
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelector('[data-tab="readme"]').classList.add('active');
         document.getElementById('overview-tab').style.display = 'none';
         document.getElementById('readme-tab').style.display = 'block';
 
-        // Render markdown
         const readmeEl = document.getElementById('readme-content');
         readmeEl.innerHTML = marked.parse(generatedReadme);
         hljs.highlightAll();
 
     } catch (error) {
-        alert('Error generating README: ' + error.message);
+        alert('ERROR: ' + error.message);
     } finally {
         hideLoading();
     }
@@ -260,34 +259,34 @@ async function generateReadme() {
 // Copy README
 function copyReadme() {
     if (!generatedReadme) {
-        alert('No README generated yet');
+        alert('NO README GENERATED');
         return;
     }
 
     navigator.clipboard.writeText(generatedReadme).then(() => {
-        alert('README copied to clipboard!');
+        alert('README COPIED TO CLIPBOARD');
     }).catch(err => {
-        console.error('Failed to copy:', err);
+        console.error('Copy failed:', err);
     });
 }
 
 // Commit README
 async function commitReadme() {
     if (!currentRepo || !generatedReadme) {
-        alert('No README to commit');
+        alert('NO README TO COMMIT');
         return;
     }
 
-    if (!confirm(`Commit this README to ${currentRepo}?`)) {
+    if (!confirm(`COMMIT README TO ${currentRepo}?`)) {
         return;
     }
 
-    showLoading('Committing README...');
+    showLoading('COMMITTING...');
 
     try {
         const response = await fetch('/api/commit', {
             method: 'POST',
-            headers: getHeaders(),
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 repo_name: currentRepo,
                 readme: generatedReadme
@@ -298,20 +297,18 @@ async function commitReadme() {
 
         if (data.error) throw new Error(data.error);
 
-        alert('README committed successfully!');
-
-        // Refresh repo list to update README status
+        alert('README COMMITTED SUCCESSFULLY');
         loadRepos();
 
     } catch (error) {
-        alert('Error committing README: ' + error.message);
+        alert('ERROR: ' + error.message);
     } finally {
         hideLoading();
     }
 }
 
 // Loading helpers
-function showLoading(text = 'Processing...') {
+function showLoading(text = 'PROCESSING...') {
     document.getElementById('loading-text').textContent = text;
     document.getElementById('loading-overlay').style.display = 'flex';
 }
